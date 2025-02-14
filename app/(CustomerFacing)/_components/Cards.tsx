@@ -36,7 +36,7 @@ const Cards: React.FC = () => {
           <motion.div
             key={category.title}
             initial={{ y: 50, opacity: 0 }} // Start below and hidden
-            animate={{ y: 0, opacity: 1 }} // Move up and fade in
+            animate={{ y: 0, opacity: 1 }} // Move up and fade inn
             transition={{ duration: 0.8 }} // Duration for each card animation
             className={category.title === "More" ? "hidden sm:block" : ""} // Hide on small screens
           >
