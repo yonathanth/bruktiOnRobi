@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.0.x","debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model SheinOrder {
+    id               String   @id @default(uuid())
+
+  name   String 
+  phoneNumber String
+  url              String   @db.VarChar(2048)
+  description      String   @db.VarChar(500)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+    quantity      Int
+
+  pricePaidInCents Float // Price represented as a decimal value
+  shippingAddress  String // Handles delivery of physical products
+
+}
+
+model Product {
+  id                     String   @id @default(uuid())
+  name                   String
+  isAvailableForPurchase Boolean  @default(true)
+  priceInCents           Float // Price represented as a decimal value
+  imagePath              String
+  description            String
+  size                   String // Specifies product size (e.g., S, M, L, etc.)
+  color                  String // Specifies product color             // Specifies the fabric/material of the clothing                               // Tracks inventory for each product
+  category               String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  orders                 Order[]
+}
+
+
+
+model Order {
+  id               String   @id @default(uuid())
+    name   String 
+  phoneNumber String
+  quantity      Int
+  pricePaidInCents Float // Price represented as a decimal value
+  shippingAddress  String // Handles delivery of physical products
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+}
