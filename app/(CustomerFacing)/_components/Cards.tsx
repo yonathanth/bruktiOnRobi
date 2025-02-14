@@ -13,6 +13,7 @@ const categories = [
   { title: "Cosmetics", imageSrc: "/cosmetics.webp" },
   { title: "Accessories", imageSrc: "/accessories.jpeg" },
   { title: "Others", imageSrc: "/others.jpeg" },
+  { title: "More", imageSrc: "/toppicks.webp" },
 ];
 
 const Cards: React.FC = () => {
@@ -37,6 +38,7 @@ const Cards: React.FC = () => {
             initial={{ y: 50, opacity: 0 }} // Start below and hidden
             animate={{ y: 0, opacity: 1 }} // Move up and fade in
             transition={{ duration: 0.8 }} // Duration for each card animation
+            className={category.title === "More" ? "hidden sm:block" : ""} // Hide on small screens
           >
             <Card title={category.title} imageSrc={category.imageSrc} />
           </motion.div>

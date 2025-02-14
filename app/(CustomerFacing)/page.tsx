@@ -19,7 +19,7 @@ export default function Home() {
         <Items home={true} category="Tops" />
         <Items home={true} category="Cosomos" />
         <Items home={true} category="Bags" />
-        <Items home={true} category="Othes" />
+        <Items home={true} category="Others" />
       </div>
       <Footer />
     </main>
