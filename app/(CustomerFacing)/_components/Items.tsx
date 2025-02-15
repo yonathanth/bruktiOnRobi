@@ -8,7 +8,7 @@ const fetchItems = async function (category: string, home: boolean) {
     return prisma.product.findMany({
       where: { isAvailableForPurchase: true, category: category },
       orderBy: { orders: { _count: "desc" } },
-      take: 4,
+      take: 6,
       select: {
         id: true,
         name: true,
