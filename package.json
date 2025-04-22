@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/ensure-directories.js",
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "next lint"

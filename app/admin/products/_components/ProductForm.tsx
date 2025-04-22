@@ -11,8 +11,20 @@ import { useFormState, useFormStatus } from "react-dom";
 import { Product } from "@prisma/client";
 import Image from "next/image";
 
+// Define the error type
+type FormErrors = {
+  name?: string[];
+  category?: string[];
+  size?: string[];
+  color?: string[];
+  description?: string[];
+  priceInCents?: string[];
+  image?: string[] | string;
+  _form?: string;
+};
+
 export function ProductForm({ product }: { product?: Product | null }) {
-  const [error, action] = useFormState(
+  const [error, action] = useFormState<FormErrors, FormData>(
     product == null ? addProduct : updateProduct.bind(null, product.id),
     {}
   );
@@ -31,7 +43,7 @@ export function ProductForm({ product }: { product?: Product | null }) {
           required
           defaultValue={product?.name || ""}
         />
-        {error.name && <div className="text-destructive">{error.name}</div>}
+        {error.name && <div className="text-destructive">{error.name[0]}</div>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
@@ -43,24 +55,30 @@ export function ProductForm({ product }: { product?: Product | null }) {
           defaultValue={product?.category || ""}
         />
         {error.category && (
-          <div className="text-destructive">{error.category}</div>
+          <div className="text-destructive">{error.category[0]}</div>
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="priceInCents">Price In Cents</Label>
+        <Label htmlFor="priceInCents">Price (in dollars)</Label>
         <Input
           type="number"
           id="priceInCents"
           name="priceInCents"
           required
-          value={priceInCents}
-          onChange={(e) => setPriceInCents(Number(e.target.value) || undefined)}
+          min="0.01"
+          step="0.01"
+          value={priceInCents ? priceInCents / 100 : ""}
+          onChange={(e) => {
+            const dollars = parseFloat(e.target.value);
+            setPriceInCents(dollars ? Math.round(dollars * 100) : undefined);
+          }}
+          placeholder="Enter price in dollars"
         />
         <div className="text-muted-foreground">
-          {formatCurrency((priceInCents || 0) / 100)}
+          {priceInCents ? formatCurrency(priceInCents / 100) : ""}
         </div>
         {error.priceInCents && (
-          <div className="text-destructive">{error.priceInCents}</div>
+          <div className="text-destructive">{error.priceInCents[0]}</div>
         )}
       </div>
       <div className="space-y-2">
@@ -71,8 +89,9 @@ export function ProductForm({ product }: { product?: Product | null }) {
           name="size"
           required
           defaultValue={product?.size || ""}
+          placeholder="e.g., S, M, L, XL"
         />
-        {error.size && <div className="text-destructive">{error.name}</div>}
+        {error.size && <div className="text-destructive">{error.size[0]}</div>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="color">Available Colors</Label>
@@ -82,8 +101,11 @@ export function ProductForm({ product }: { product?: Product | null }) {
           name="color"
           required
           defaultValue={product?.color || ""}
+          placeholder="e.g., Red, Blue, Black"
         />
-        {error.color && <div className="text-destructive">{error.name}</div>}
+        {error.color && (
+          <div className="text-destructive">{error.color[0]}</div>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
@@ -94,22 +116,35 @@ export function ProductForm({ product }: { product?: Product | null }) {
           defaultValue={product?.description}
         />
         {error.description && (
-          <div className="text-destructive">{error.description}</div>
+          <div className="text-destructive">{error.description[0]}</div>
         )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="image">Image</Label>
-        <Input type="file" id="image" name="image" required={product == null} />
-        {product != null && (
-          <Image
-            src={product.imagePath}
-            height="400"
-            width="400"
-            alt="Product Image"
-          />
+        <Input
+          type="file"
+          id="image"
+          name="image"
+          required={product == null}
+          accept="image/*"
+        />
+        {product != null && product.imagePath && (
+          <div className="mt-2">
+            <Image
+              src={product.imagePath}
+              height={400}
+              width={400}
+              alt="Product Image"
+              className="object-contain"
+              priority
+            />
+          </div>
         )}
-        {error.image && <div className="text-destructive">{error.image}</div>}
+        {error.image && (
+          <div className="text-destructive">{error.image[0]}</div>
+        )}
       </div>
+      {error._form && <div className="text-destructive">{error._form}</div>}
       <SubmitButton />
     </form>
   );

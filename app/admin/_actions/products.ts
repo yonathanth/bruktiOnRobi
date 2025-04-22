@@ -6,53 +6,97 @@ import fs from "fs/promises";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+// Ensure the products directory exists
+async function ensureProductsDirectory() {
+  try {
+    await fs.mkdir("public/products", { recursive: true });
+    console.log("Products directory ensured");
+  } catch (error) {
+    console.error("Error creating products directory:", error);
+  }
+}
+
+// Call this function when the module is loaded
+ensureProductsDirectory();
+
 const fileSchema = z.instanceof(File, { message: "Required" });
 const imageSchema = fileSchema.refine(
   (file) => file.size === 0 || file.type.startsWith("image/")
 );
 
 const addSchema = z.object({
-  name: z.string().min(1),
-  category: z.string().min(1),
-  size: z.string().min(1),
-  color: z.string().min(1),
-  description: z.string().min(1),
-  priceInCents: z.coerce.number().int().min(1),
-  image: imageSchema.refine((file) => file.size > 0, "Required"),
+  name: z.string().min(1, "Name is required"),
+  category: z.string().min(1, "Category is required"),
+  size: z.string().min(1, "Size is required"),
+  color: z.string().min(1, "Color is required"),
+  description: z.string().min(1, "Description is required"),
+  priceInCents: z.coerce
+    .number()
+    .int()
+    .min(1, "Price must be greater than 0")
+    .transform((val) => Math.round(val * 100)), // Convert dollars to cents
+  image: imageSchema.refine((file) => file.size > 0, "Image is required"),
 });
 
 export async function addProduct(prevState: unknown, formData: FormData) {
-  const result = addSchema.safeParse(Object.fromEntries(formData.entries()));
-  if (result.success === false) {
-    return result.error.formErrors.fieldErrors;
+  try {
+    const result = addSchema.safeParse(Object.fromEntries(formData.entries()));
+    if (result.success === false) {
+      return result.error.formErrors.fieldErrors;
+    }
+
+    const data = result.data;
+
+    // Generate a unique filename for the image
+    const uniqueId = crypto.randomUUID();
+    const fileExtension = data.image.name.split(".").pop();
+    const imagePath = `/products/${uniqueId}.${fileExtension}`;
+
+    try {
+      // Write the image file using a more reliable approach
+      const bytes = await data.image.arrayBuffer();
+      await fs.writeFile(`public${imagePath}`, new Uint8Array(bytes));
+    } catch (error) {
+      console.error("Error saving image:", error);
+      return { image: "Failed to save image" };
+    }
+
+    // Create the product in the database
+    try {
+      await prisma.product.create({
+        data: {
+          isAvailableForPurchase: false,
+          name: data.name,
+          category: data.category,
+          description: data.description,
+          priceInCents: data.priceInCents,
+          size: data.size,
+          color: data.color,
+          imagePath,
+        },
+      });
+    } catch (error) {
+      // If database creation fails, clean up the uploaded image
+      try {
+        await fs.unlink(`public${imagePath}`);
+      } catch (unlinkError) {
+        console.error(
+          "Error cleaning up image after failed product creation:",
+          unlinkError
+        );
+      }
+      console.error("Error creating product:", error);
+      return { _form: "Failed to create product" };
+    }
+
+    revalidatePath("/");
+    revalidatePath("/products");
+
+    redirect("/admin/products");
+  } catch (error) {
+    console.error("Unexpected error in addProduct:", error);
+    return { _form: "An unexpected error occurred" };
   }
-
-  const data = result.data;
-
-  await fs.mkdir("public/products", { recursive: true });
-  const imagePath = `/products/${crypto.randomUUID()}-${data.image.name}`;
-  await fs.writeFile(
-    `public${imagePath}`,
-    Buffer.from(await data.image.arrayBuffer())
-  );
-
-  await prisma.product.create({
-    data: {
-      isAvailableForPurchase: false,
-      name: data.name,
-      category: data.category,
-      description: data.description,
-      priceInCents: data.priceInCents,
-      size: data.size,
-      color: data.color,
-      imagePath,
-    },
-  });
-
-  revalidatePath("/");
-  revalidatePath("/products");
-
-  redirect("/admin/products");
 }
 
 const editSchema = addSchema.extend({
@@ -76,26 +120,41 @@ export async function updateProduct(
 
   let imagePath = product.imagePath;
   if (data.image != null && data.image.size > 0) {
-    await fs.unlink(`public${product.imagePath}`);
-    imagePath = `/products/${crypto.randomUUID()}-${data.image.name}`;
-    await fs.writeFile(
-      `public${imagePath}`,
-      Buffer.from(await data.image.arrayBuffer())
-    );
+    try {
+      // Delete the old image
+      await fs.unlink(`public${product.imagePath}`);
+
+      // Generate a unique filename for the new image
+      const uniqueId = crypto.randomUUID();
+      const fileExtension = data.image.name.split(".").pop();
+      imagePath = `/products/${uniqueId}.${fileExtension}`;
+
+      // Write the new image file
+      const bytes = await data.image.arrayBuffer();
+      await fs.writeFile(`public${imagePath}`, new Uint8Array(bytes));
+    } catch (error) {
+      console.error("Error updating image:", error);
+      return { image: "Failed to update image" };
+    }
   }
 
-  await prisma.product.update({
-    where: { id },
-    data: {
-      name: data.name,
-      category: data.category,
-      size: data.size,
-      color: data.color,
-      description: data.description,
-      priceInCents: data.priceInCents,
-      imagePath,
-    },
-  });
+  try {
+    await prisma.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        category: data.category,
+        size: data.size,
+        color: data.color,
+        description: data.description,
+        priceInCents: data.priceInCents,
+        imagePath,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    return { _form: "Failed to update product" };
+  }
 
   revalidatePath("/");
   revalidatePath("/products");
