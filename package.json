@@ -6,8 +6,10 @@
     "dev": "next dev",
     "prebuild": "node scripts/ensure-directories.js",
     "build": "next build",
-    "start": "next start -p 4000",
-    "lint": "next lint"
+    "postbuild": "node scripts/verify-images.js",
+    "start": "next start  -p 4000",
+    "lint": "next lint",
+    "verify-images": "node scripts/verify-images.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

@@ -56,6 +56,9 @@ export async function addProduct(prevState: unknown, formData: FormData) {
       // Write the image file using a more reliable approach
       const bytes = await data.image.arrayBuffer();
       await fs.writeFile(`public${imagePath}`, new Uint8Array(bytes));
+
+      // Log the image path for debugging
+      console.log(`Image saved to: public${imagePath}`);
     } catch (error) {
       console.error("Error saving image:", error);
       return { image: "Failed to save image" };
@@ -75,6 +78,9 @@ export async function addProduct(prevState: unknown, formData: FormData) {
           imagePath,
         },
       });
+
+      // Log successful product creation
+      console.log(`Product created with image path: ${imagePath}`);
     } catch (error) {
       // If database creation fails, clean up the uploaded image
       try {
